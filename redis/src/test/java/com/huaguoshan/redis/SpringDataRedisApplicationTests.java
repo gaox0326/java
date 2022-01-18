@@ -14,6 +14,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 
 import com.huaguoshan.redis.limit.RateLimiter;
 import com.huaguoshan.redis.limit.RateLimiterConfig;
+import com.huaguoshan.redis.limit.RateLimiterType;
 import com.huaguoshan.redis.lock.ReentrantLock;
 
 @SpringBootTest
@@ -109,19 +110,73 @@ class SpringDataRedisApplicationTests {
         lock.unlock();
     }
 
-    @Test
-    void testRateLimiter() {
-        String rateLimiterName = "rateLimiter";
+//    @Test
+    void testFixWindowRateLimiter() {
+        // 限流器配置限流刷新期间为 5s，限流容量为 5
+        // 第 1 次限流通过之后 sleep 4.5s，然后连续 9 次限流判断，期望前 5 次通过，后 5 次失败
+        // 第 10 次限流判断之后 sleep 1s，然后连续 10 次限流判断，期望前 5 次通过，后 5 次失败
+        // 首先，验证了限流器正确性
+        // 其次，验证固定窗口限流算法的边界问题
+        String rateLimiterName = "fixWindow rateLimiter";
         RateLimiterConfig config = new RateLimiterConfig();
         config.setName(rateLimiterName);
         config.setLimitForPeriod(5);
-        Duration limiterRefreshPeriod = Duration.ofSeconds(10);
+        Duration limiterRefreshPeriod = Duration.ofSeconds(5);
         config.setLimitRefreshPeriod(limiterRefreshPeriod);
         RateLimiter rateLimiter = hgsReis.getRateLimiter(config);
         int count = 20;
         for (int index = 0; index < count; index++) {
             boolean premission = rateLimiter.getPermission();
             logger.error(rateLimiterName + index + "限流" + (premission ? "通过" : "不通过"));
+            if (index == 0) {
+                try {
+                    Thread.sleep(4500);
+                } catch (InterruptedException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
+            } else if (index == 9) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
+            }
+        }
+
+    }
+
+    @Test
+    void testSlidingWindowRateLimiter() {
+        // 限流器配置限流刷新期间为 5s，限流容量为 5
+        // 第 1 次限流通过之后 sleep 4.5s，然后连续 9 次限流判断，期望前 5 次通过，后 5 次失败
+        // 第 10 次限流判断之后 sleep 1s，然后连续 5 次限流判断，期望前 1 次通过，后 4 次失败
+        // 首先，验证了限流器正确性
+        // 其次，验证滑动窗口限流算法解决了边界问题
+        String rateLimiterName = "slidingWindow rateLimiter";
+        RateLimiterConfig config = new RateLimiterConfig();
+        config.setName(rateLimiterName);
+        config.setLimitForPeriod(5);
+        Duration limiterRefreshPeriod = Duration.ofSeconds(5);
+        config.setLimitRefreshPeriod(limiterRefreshPeriod);
+        config.setType(RateLimiterType.SLIDINGWINDOW);
+        RateLimiter rateLimiter = hgsReis.getRateLimiter(config);
+        int count = 15;
+        for (int index = 0; index < count; index++) {
+            boolean premission = rateLimiter.getPermission();
+            logger.error(rateLimiterName + index + "限流" + (premission ? "通过" : "不通过"));
+            if (index == 0) {
+                try {
+                    Thread.sleep(4500);
+                } catch (InterruptedException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
+            } else if (index == 9) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    logger.error(ex.getMessage(), ex);
+                }
+            }
         }
     }
 
