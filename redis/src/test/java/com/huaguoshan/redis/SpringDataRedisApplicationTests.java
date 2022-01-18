@@ -1,5 +1,6 @@
 package com.huaguoshan.redis;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -11,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 
+import com.huaguoshan.redis.limit.RateLimiter;
+import com.huaguoshan.redis.limit.RateLimiterConfig;
 import com.huaguoshan.redis.lock.ReentrantLock;
 
 @SpringBootTest
@@ -99,11 +102,27 @@ class SpringDataRedisApplicationTests {
         logger.info(id + "释放 ReentrantLock 成功，lockName = " + lockName);
     }
 
-    @Test
+//    @Test
     void testUnlock() {
         String lockName = "ReentrantLock";
         ReentrantLock lock = hgsReis.getReentrantLock(lockName);
         lock.unlock();
+    }
+
+    @Test
+    void testRateLimiter() {
+        String rateLimiterName = "rateLimiter";
+        RateLimiterConfig config = new RateLimiterConfig();
+        config.setName(rateLimiterName);
+        config.setLimitForPeriod(5);
+        Duration limiterRefreshPeriod = Duration.ofSeconds(10);
+        config.setLimitRefreshPeriod(limiterRefreshPeriod);
+        RateLimiter rateLimiter = hgsReis.getRateLimiter(config);
+        int count = 20;
+        for (int index = 0; index < count; index++) {
+            boolean premission = rateLimiter.getPermission();
+            logger.error(rateLimiterName + index + "限流" + (premission ? "通过" : "不通过"));
+        }
     }
 
 }
