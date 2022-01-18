@@ -32,32 +32,37 @@ public class ReentrantLock implements Lock {
     // 获取锁 lua 脚本
     // KEYS[1] 锁名称，ARGV[1] 锁过期时间（秒），ARGV[2] 获取锁客户端标识
     // return nil if lock success, expire seconds otherwise
-    private final static String LOCK = "if (redis.call('exists', KEYS[1]) == 0) then"
-            + "    redis.call('hset', KEYS[1], ARGV[2], 1);"
-            + "    redis.call('pexpire', KEYS[1], ARGV[1]);"
-            + "    return nil;"
-            + "end;"
-            + "if (redis.call('hexists', KEYS[1], ARGV[2]) == 1) then"
-            + "    redis.call('hincrby', KEYS[1], ARGV[2], 1);"
-            + "    redis.call('pexpire', KEYS[1], ARGV[1]);"
-            + "    return nil;"
-            + "end;"
+    private final static String LOCK = "if (redis.call('exists', KEYS[1]) == 0) then "
+            + "    redis.call('hset', KEYS[1], ARGV[2], 1); "
+            + "    redis.call('pexpire', KEYS[1], ARGV[1]); "
+            + "    return nil; "
+            + "end; "
+            + "if (redis.call('hexists', KEYS[1], ARGV[2]) == 1) then "
+            + "    redis.call('hincrby', KEYS[1], ARGV[2], 1); "
+            + "    redis.call('pexpire', KEYS[1], ARGV[1]); "
+            + "    return nil; "
+            + "end; "
             + "return redis.call('pttl', KEYS[1]);";
 
     // 解锁 lua 脚本
     // KEYS[1] 锁名称，ARGV[1] 获取锁客户端标识
     // return 1 if unlock success, 0 otherwise
-    private final static String UNLOCK = "if (redis.call('exists', KEYS[1]) == 0) then"
-            + "    return 1;"
-            + "end;"
-            + "if (redis.call('hexists', KEYS[1], ARGV[1]) == 1) then"
-            + "    local count = redis.call('hincrby', KEYS[1], ARGV[1], -1);"
-            + "    if (count == 0) then"
-            + "          redis.call('del', KEYS[1]);"
-            + "    end;"
-            + "    return 1;"
-            + "end;"
+    private final static String UNLOCK = "if (redis.call('exists', KEYS[1]) == 0) then "
+            + "    return 1; "
+            + "end; "
+            + "if (redis.call('hexists', KEYS[1], ARGV[1]) == 1) then "
+            + "    local count = redis.call('hincrby', KEYS[1], ARGV[1], -1); "
+            + "    if (count == 0) then "
+            + "          redis.call('del', KEYS[1]); "
+            + "    end; "
+            + "    return 1; "
+            + "end; "
             + "return 0;";
+
+    private ReentrantLock(String lockName, RedisTemplate<String, Object> redisTemplate) {
+        this.lockName = lockName;
+        this.redisTempalte = redisTemplate;
+    }
 
     /**
      * 获取可重入锁实例
@@ -66,9 +71,7 @@ public class ReentrantLock implements Lock {
      * @return
      */
     public static ReentrantLock instance(String lockName, RedisTemplate<String, Object> redisTemplate) {
-        ReentrantLock lock = new ReentrantLock();
-        lock.lockName = lockName;
-        lock.redisTempalte = redisTemplate;
+        ReentrantLock lock = new ReentrantLock(lockName, redisTemplate);
         return lock;
     }
 
