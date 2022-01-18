@@ -16,7 +16,7 @@ public class RateLimiter {
 
     private RateLimiterConfig config;
 
-    private RedisTemplate<String, Object> redisTempalte;
+    private RedisTemplate<String, Object> redisTemplate;
 
     // 获取权限 lua 脚本
     // KEYS[1] 限流名称，ARGV[1] 限流容量，ARGV[2] 限流区间，毫秒
@@ -35,15 +35,15 @@ public class RateLimiter {
             + "    return current + 1; "
             + "end;";
 
-    private RateLimiter(RateLimiterConfig config, RedisTemplate<String, Object> redisTempalte) {
+    private RateLimiter(RateLimiterConfig config, RedisTemplate<String, Object> redisTemplate) {
         this.config = config;
-        this.redisTempalte = redisTempalte;
+        this.redisTemplate = redisTemplate;
     }
 
-    public static RateLimiter instance(RateLimiterConfig config, RedisTemplate<String, Object> redisTempalte) {
+    public static RateLimiter instance(RateLimiterConfig config, RedisTemplate<String, Object> redisTemplate) {
         Assert.notNull(config, "config 不能为空");
-        Assert.notNull(redisTempalte, "redisTempalte 不能为空");
-        RateLimiter rateLimiter = new RateLimiter(config, redisTempalte);
+        Assert.notNull(redisTemplate, "redisTemplate 不能为空");
+        RateLimiter rateLimiter = new RateLimiter(config, redisTemplate);
         return rateLimiter;
     }
 
@@ -52,7 +52,7 @@ public class RateLimiter {
         keys.add(config.getName());
         try {
             RedisScript<Long> luaScript = new DefaultRedisScript<>(GET_PERMISSION, Long.class);
-            Long result = redisTempalte.execute(luaScript, keys, config.getLimitForPeriod(), config.getLimitRefreshPeriod().toMillis());
+            Long result = redisTemplate.execute(luaScript, keys, config.getLimitForPeriod(), config.getLimitRefreshPeriod().toMillis());
             return result != 0;
         } catch (Exception ex) {
             logger.error(ex.getMessage(), ex);
