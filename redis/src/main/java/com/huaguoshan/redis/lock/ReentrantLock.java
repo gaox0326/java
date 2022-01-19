@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.util.Assert;
 
 /**
  * 基于 redis 实现的可重入分布式锁
@@ -71,6 +72,8 @@ public class ReentrantLock implements Lock {
      * @return
      */
     public static ReentrantLock instance(String lockName, RedisTemplate<String, Object> redisTemplate) {
+        Assert.notNull(lockName, "lockName 不能为空");
+        Assert.notNull(redisTemplate, "redisTemplate 不能为空");
         ReentrantLock lock = new ReentrantLock(lockName, redisTemplate);
         return lock;
     }
