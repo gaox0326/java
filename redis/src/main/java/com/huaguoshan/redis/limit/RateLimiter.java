@@ -59,7 +59,7 @@ public class RateLimiter {
             + "    return 0; "
             + "else "
             + "    redis.call('zadd', key, now, ARGV[4]); "
-            + "    redis.call('pexpire', key, limitRefreshPeriod + 1000000); "
+            + "    redis.call('pexpire', key, limitRefreshPeriod + 100); "
             + "    return current + 1; "
             + "end;";
 
