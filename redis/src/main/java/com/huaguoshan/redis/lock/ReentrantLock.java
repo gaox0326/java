@@ -25,14 +25,16 @@ public class ReentrantLock implements Lock {
     // 锁名称
     private String lockName;
 
+    // redisTempalte
     private RedisTemplate<String, Object> redisTempalte;
 
-    // 获取锁默认过期时间
+    // 获取锁默认过期时间，30 秒
     private final static long DEFAULT_EXPIRE = 30 * 1000L;
 
     // 获取锁 lua 脚本
     // KEYS[1] 锁名称，ARGV[1] 锁过期时间（秒），ARGV[2] 获取锁客户端标识
-    // return nil if lock success, expire seconds otherwise
+    // 获取锁成功则返回 nil，并设置锁过期时间，如果是当前线程重复获取锁，则重置过期时间
+    // 否则返回当前锁持有剩余有效期（秒）
     private final static String LOCK = "if (redis.call('exists', KEYS[1]) == 0) then "
             + "    redis.call('hset', KEYS[1], ARGV[2], 1); "
             + "    redis.call('pexpire', KEYS[1], ARGV[1]); "
@@ -47,7 +49,8 @@ public class ReentrantLock implements Lock {
 
     // 解锁 lua 脚本
     // KEYS[1] 锁名称，ARGV[1] 获取锁客户端标识
-    // return 1 if unlock success, 0 otherwise
+    // 解锁成功返回 1，如果当前锁没有被持有，也认为解锁成功
+    // 否则返回 0
     private final static String UNLOCK = "if (redis.call('exists', KEYS[1]) == 0) then "
             + "    return 1; "
             + "end; "
@@ -69,7 +72,7 @@ public class ReentrantLock implements Lock {
      * 获取可重入锁实例
      * @param lockName 锁名称
      * @param redisTemplate redisTemplate
-     * @return
+     * @return 可重入锁实例
      */
     public static ReentrantLock instance(String lockName, RedisTemplate<String, Object> redisTemplate) {
         Assert.notNull(lockName, "lockName 不能为空");
@@ -142,6 +145,10 @@ public class ReentrantLock implements Lock {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * 获取当前线程 id
+     * @return 当前线程 id
+     */
     private String getClientId() {
         return String.valueOf(Thread.currentThread().getId());
     }
